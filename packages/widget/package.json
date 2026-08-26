@@ -1,0 +1,14 @@
+{
+  "name": "@morepaying/widget",
+  "version": "0.0.1",
+  "license": "MIT",
+  "description": "MorePaying conversion widget. Serve apps/web/public/widget.js from your origin until npm publish.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CharlieLZ/morepaying.git",
+    "directory": "packages/widget"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "name": "morepaying",
+  "version": "0.0.1",
+  "private": false,
+  "license": "MIT",
+  "description": "MorePaying public install: CLI, MCP, skills, and widget. The hosted product lives in a private repo.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CharlieLZ/morepaying.git"
+  },
+  "bin": {
+    "morepaying": "packages/cli/bin/morepaying.mjs",
+    "morepaying-mcp": "packages/mcp/server.mjs"
+  },
+  "files": [
+    "packages/cli",
+    "packages/mcp",
+    "packages/skills",
+    "packages/widget",
+    "public/widget.js"
+  ],
+  "scripts": {
+    "cli": "node packages/cli/bin/morepaying.mjs",
+    "mcp": "node packages/mcp/server.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
