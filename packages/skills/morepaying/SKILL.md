@@ -11,16 +11,16 @@ Ask why they pay and why they don't. The sentence is a hypothesis until plan, us
 
 ## Setup
 
-From the MorePaying repo root (do not hardcode a machine path):
+First configure your private project key in the agent's environment:
+
+```bash
+export MOREPAYING_API=https://morepaying.com
+export MOREPAYING_KEY=your-project-key
+```
 
 ```bash
 pnpm cli
 pnpm mcp
-```
-
-```bash
-export MOREPAYING_API=http://localhost:3000
-export MOREPAYING_KEY=mp_proj_demo
 ```
 
 From GitHub:
@@ -41,10 +41,10 @@ Public npm scoped packages are `@morepaying/cli` and `@morepaying/mcp` when an n
 - `/morepaying release` — `release --through <deployed sha>`. SHA must match `git rev-parse HEAD`, or `local-mvp`
 - `/morepaying notify` — writes an inbox note the reporter sees on `?mine=`
 - `/morepaying paying` — baseline vs tracked paying amount
-- `/morepaying funnel` — 327 opened / 84 did not / 31 left a reason
+- `/morepaying funnel` — read the current project's funnel counts
 - `/morepaying channels` — paying and blocked revenue by source
 - `/morepaying report` — weekly judgment
-- `/morepaying stripe` — read-only sync of the caller's Stripe totals
+- `/morepaying stripe` — writes caller-supplied totals to MorePaying; it does not mutate Stripe
 - `/morepaying impact` — reason × people × blocked revenue
 
 ## Agent rules
@@ -54,5 +54,5 @@ Public npm scoped packages are `@morepaying/cli` and `@morepaying/mcp` when an n
 3. Do not deploy production code unless the user asks.
 4. After pick, keep the signal in progress until ready.
 5. Prefer the top blocked-revenue pattern over a one-off quote.
-6. After release, more paid this period must move. Later Stripe sync fills 7/14/30 day windows.
+6. After release, observe comparable 7/14/30 day windows. A change does not guarantee more payments; distinguish observed association from causation and demo data from real orders.
 7. Ask in the product. Do not send email surveys.

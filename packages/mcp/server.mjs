@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
 import { assertReadyGit, assertReleaseSha } from "../cli/git-verify.mjs"
+import { createInterface } from "node:readline"
 
-const API = process.env.MOREPAYING_API || "http://localhost:3000"
-const KEY = process.env.MOREPAYING_KEY || "mp_proj_demo"
+const API = process.env.MOREPAYING_API || "https://morepaying.com"
+const KEY = process.env.MOREPAYING_KEY
 
 const TOOLS = [
   { name: "list", description: "Browse conversion signals", inputSchema: { type: "object", properties: { status: { type: "string" } } } },
@@ -21,19 +22,22 @@ const TOOLS = [
   { name: "assign", description: "Assign a signal", inputSchema: { type: "object", properties: { id: { type: "string" }, assignee: { type: "string" } }, required: ["id"] } },
   { name: "notify", description: "Write an inbox note the reporter can see on the public board", inputSchema: { type: "object", properties: { id: { type: "string" }, body: { type: "string" } }, required: ["id"] } },
   { name: "impact", description: "Reason × people × blocked revenue", inputSchema: { type: "object", properties: {} } },
-  { name: "funnel", description: "327 opened / 84 did not upgrade / 31 left a reason", inputSchema: { type: "object", properties: {} } },
+  { name: "funnel", description: "Read the project's current conversion funnel counts", inputSchema: { type: "object", properties: {} } },
   { name: "channels", description: "Paying and blocked revenue by source", inputSchema: { type: "object", properties: {} } },
   { name: "report", description: "Weekly founder judgment", inputSchema: { type: "object", properties: {} } },
-  { name: "stripe", description: "Read-only paying sync from the caller's Stripe totals", inputSchema: { type: "object", properties: { currentAmountCents: { type: "number" }, currentCustomers: { type: "number" } } } },
+  { name: "stripe", description: "Write caller-supplied totals into MorePaying. Does not charge or mutate Stripe.", inputSchema: { type: "object", properties: { currentAmountCents: { type: "number" }, currentCustomers: { type: "number" } } } },
 ]
 
 async function api(path, body) {
+  if (!KEY) throw new Error("Set MOREPAYING_KEY to your MorePaying project key")
   const res = await fetch(`${API}${path}`, {
     method: body ? "POST" : "GET",
     headers: { "Content-Type": "application/json", "X-Project-Key": KEY },
     body: body ? JSON.stringify(body) : undefined,
   })
-  return res.json()
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || `MorePaying API returned HTTP ${res.status}`)
+  return data
 }
 
 async function callTool(name, args = {}) {
@@ -88,9 +92,7 @@ async function callTool(name, args = {}) {
 }
 
 function write(message) {
-  const json = JSON.stringify(message)
-  const header = `Content-Length: ${Buffer.byteLength(json, "utf8")}\r\n\r\n`
-  process.stdout.write(header + json)
+  process.stdout.write(JSON.stringify(message) + "\n")
 }
 
 function handle(message) {
@@ -123,7 +125,7 @@ function handle(message) {
         })
       })
       .catch((error) => {
-        write({ jsonrpc: "2.0", id, error: { code: -32000, message: String(error.message || error) } })
+        write({ jsonrpc: "2.0", id, result: { isError: true, content: [{ type: "text", text: String(error.message || error) }] } })
       })
     return
   }
@@ -132,23 +134,17 @@ function handle(message) {
   }
 }
 
-let buffer = Buffer.alloc(0)
-process.stdin.on("data", (chunk) => {
-  buffer = Buffer.concat([buffer, chunk])
-  while (true) {
-    const headerEnd = buffer.indexOf("\r\n\r\n")
-    if (headerEnd === -1) return
-    const header = buffer.slice(0, headerEnd).toString("utf8")
-    const match = header.match(/Content-Length:\s*(\d+)/i)
-    if (!match) {
-      buffer = buffer.slice(headerEnd + 4)
-      continue
-    }
-    const length = Number(match[1])
-    const start = headerEnd + 4
-    if (buffer.length < start + length) return
-    const body = buffer.slice(start, start + length).toString("utf8")
-    buffer = buffer.slice(start + length)
-    handle(JSON.parse(body))
+// MCP stdio is newline-delimited UTF-8 JSON, including across pipe chunks.
+createInterface({ input: process.stdin, crlfDelay: Infinity }).on("line", (line) => {
+  if (!line.trim()) return
+  let message
+  try { message = JSON.parse(line) } catch {
+    write({ jsonrpc: "2.0", id: null, error: { code: -32700, message: "Invalid JSON" } })
+    return
   }
+  if (!message || typeof message !== "object" || Array.isArray(message) || message.jsonrpc !== "2.0" || typeof message.method !== "string") {
+    write({ jsonrpc: "2.0", id: null, error: { code: -32600, message: "Invalid request" } })
+    return
+  }
+  handle(message)
 })

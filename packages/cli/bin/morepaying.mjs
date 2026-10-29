@@ -2,8 +2,8 @@
 
 import { assertReadyGit, assertReleaseSha } from "../git-verify.mjs"
 
-const API = process.env.MOREPAYING_API || "http://localhost:3000"
-const KEY = process.env.MOREPAYING_KEY || "mp_proj_demo"
+const API = process.env.MOREPAYING_API || "https://morepaying.com"
+const KEY = process.env.MOREPAYING_KEY
 
 function arg(name) {
   const index = process.argv.indexOf(name)
@@ -12,6 +12,7 @@ function arg(name) {
 }
 
 async function api(path, body) {
+  if (!KEY) throw new Error("Set MOREPAYING_KEY to your MorePaying project key")
   const res = await fetch(`${API}${path}`, {
     method: body ? "POST" : "GET",
     headers: {
